@@ -18,6 +18,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.ArcoreFilters">
+        <activity android:name=".ResultsActivity"></activity>
 
         <meta-data
             android:name="com.google.ar.core"

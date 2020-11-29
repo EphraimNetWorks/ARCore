@@ -9,6 +9,7 @@ import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.ar.core.AugmentedFace
 import com.google.ar.core.TrackingState
 import com.google.ar.sceneform.rendering.ModelRenderable
@@ -17,7 +18,7 @@ import com.google.ar.sceneform.rendering.Texture
 import com.google.ar.sceneform.ux.ArFragment
 import com.google.ar.sceneform.ux.AugmentedFaceNode
 
-class MainActivity : AppCompatActivity(), FacePropRecyclerAdapter.ViewHolderActions {
+class MainActivity : AppCompatActivity() {
 
     private val arFragment by lazy {
         supportFragmentManager.findFragmentById(R.id.fragment) as ArFragment
@@ -31,6 +32,14 @@ class MainActivity : AppCompatActivity(), FacePropRecyclerAdapter.ViewHolderActi
         findViewById<LinearLayout>(R.id.bottom_sheet)
     }
 
+    private val takePhotoFab by lazy {
+        findViewById<FloatingActionButton>(R.id.take_photo_fab)
+    }
+
+    private val photoSaver by lazy{
+        PhotoSaver(this)
+    }
+
     private lateinit var selectedModel : FaceProp
     private var selectedFaceRenderable: ModelRenderable? = null
     private var selectedFaceTexture: Texture? = null
@@ -39,12 +48,13 @@ class MainActivity : AppCompatActivity(), FacePropRecyclerAdapter.ViewHolderActi
             listOf(
                     FaceProp("Tribal", R.drawable.tribal_face, R.drawable.tribal_uv, PropType.TEXTURE),
                     FaceProp("FeatherTribal", R.drawable.red_indian_tribal_face, R.drawable.red_indian_tribal_uv, PropType.TEXTURE),
+                    FaceProp("ColorTribal", R.drawable.color_tribal_face, R.drawable.color_tribal_uv, PropType.TEXTURE),
                     FaceProp("Puppy", R.drawable.puppy_face, R.raw.fox_face, PropType.MODEL),
                     FaceProp("Pirate", R.drawable.pirate_hat, R.raw.pirate_hat, PropType.MODEL),
                     FaceProp("Cowboy", R.drawable.cowboy_hat, R.raw.cowboy_hat, PropType.MODEL),
                     FaceProp("Crown", R.drawable.crown, R.raw.crown, PropType.MODEL),
                     FaceProp("Wizard", R.drawable.wizard_hat, R.raw.wizard_hat, PropType.MODEL),
-            ),this, this)
+            ),this)
 
     private val faceNodeMap = HashMap<AugmentedFace, AugmentedFaceNode>()
 
@@ -58,12 +68,14 @@ class MainActivity : AppCompatActivity(), FacePropRecyclerAdapter.ViewHolderActi
                 this@MainActivity.selectedModel = it
                 when(it.type){
                     PropType.MODEL->{
+                        clear()
                         loadModel<ModelRenderable> { modelRenderable ->
                             Log.i("MainActivity","Face prop successfully loaded")
                             selectedFaceRenderable = modelRenderable
                         }
                     }
                     PropType.TEXTURE->{
+                        clear()
                         loadModel<Texture> { texture ->
                             Log.i("MainActivity","Face prop successfully loaded")
                             selectedFaceTexture = texture
@@ -79,10 +91,15 @@ class MainActivity : AppCompatActivity(), FacePropRecyclerAdapter.ViewHolderActi
         arFragment.arSceneView.cameraStreamRenderPriority = Renderable.RENDER_PRIORITY_FIRST
         arFragment.arSceneView.scene.addOnUpdateListener {
             if(selectedFaceRenderable!=null || selectedFaceTexture !=null){
-                addTrackedFaces(selectedFaceRenderable!!)
+                addTrackedFaces()
                 removeUntrackedFaces()
             }
         }
+
+        takePhotoFab.setOnClickListener {
+            photoSaver.takePhoto(arFragment.arSceneView)
+        }
+
     }
 
     private fun setupBottomSheet(){
@@ -105,18 +122,33 @@ class MainActivity : AppCompatActivity(), FacePropRecyclerAdapter.ViewHolderActi
         )
     }
 
-    private fun addTrackedFaces(faceRenderable: ModelRenderable){
+    private fun addTrackedFaces(){
         val session = arFragment.arSceneView.session ?:return
         val faceList = session.getAllTrackables(AugmentedFace::class.java)
         for (face in faceList){
             if(!faceNodeMap.containsKey(face)){
                 AugmentedFaceNode(face).apply {
                     setParent(arFragment.arSceneView.scene)
-                    faceRegionsRenderable = faceRenderable
+                    if(selectedFaceRenderable !=null){
+                        faceRegionsRenderable = selectedFaceRenderable
+                    }else{
+                        faceMeshTexture = selectedFaceTexture
+                    }
                     faceNodeMap[face] = this
                 }
             }
         }
+    }
+
+    private fun clear(){
+        faceNodeMap.values.forEach {
+            it.setParent(null)
+            it.faceRegionsRenderable = null
+            it.faceMeshTexture = null
+        }
+        faceNodeMap.clear()
+        selectedFaceTexture = null
+        selectedFaceRenderable = null
     }
 
     private fun removeUntrackedFaces(){
@@ -163,10 +195,6 @@ class MainActivity : AppCompatActivity(), FacePropRecyclerAdapter.ViewHolderActi
                     }
             }
         }
-
-    }
-
-    override fun applyFaceProp(props: FaceProp) {
 
     }
 

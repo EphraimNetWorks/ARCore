@@ -13,7 +13,6 @@ import androidx.recyclerview.widget.RecyclerView
 
 class FacePropRecyclerAdapter(
     private val filters: List<FaceProp>,
-    private val actions: ViewHolderActions,
     private val lifecycleOwner: LifecycleOwner
 ) : RecyclerView.Adapter<FacePropRecyclerAdapter.FacePropViewHolder>() {
 
@@ -22,7 +21,7 @@ class FacePropRecyclerAdapter(
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): FacePropViewHolder {
         val layoutInflater = LayoutInflater.from(parent.context)
         val view = layoutInflater.inflate(R.layout.adapter_face_props, parent, false)
-        return FacePropViewHolder(view, actions)
+        return FacePropViewHolder(view)
     }
 
     override fun onBindViewHolder(holder: FacePropViewHolder, position: Int) {
@@ -35,8 +34,7 @@ class FacePropRecyclerAdapter(
 
 
     inner class FacePropViewHolder(
-        view: View,
-        private val actions: ViewHolderActions
+        view: View
     ) : RecyclerView.ViewHolder(view){
 
         private val propContainer = view.findViewById<ConstraintLayout>(R.id.prop_container)
@@ -57,7 +55,6 @@ class FacePropRecyclerAdapter(
             this.prop = prop
             propImageView.setImageResource(prop.icon)
             propImageView.setOnClickListener {
-                actions.applyFaceProp(prop)
                 selectedModel.postValue(prop)
             }
         }
@@ -65,8 +62,5 @@ class FacePropRecyclerAdapter(
 
     }
 
-    interface ViewHolderActions{
-        fun applyFaceProp(props: FaceProp)
-    }
 
 }
